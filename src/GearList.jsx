@@ -80,8 +80,8 @@ export default function GearList() {
             <h2 className="text-xl font-semibold">{type.name}</h2>
             <p><strong>Total Units:</strong> {type.count}</p>
             <p className={
-              type.status === 'Fully Available' ? 'text-green-600' :
-              type.status === 'Unavailable' ? 'text-red-600' :
+              type.status === 'Available' ? 'text-green-600' :
+              type.status === 'In-Use' ? 'text-red-600' :
               'text-yellow-600'
             }>
               <strong>Status:</strong> {type.status}

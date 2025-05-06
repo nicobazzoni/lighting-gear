@@ -1,19 +1,19 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-import GearList from './GearList'
-import React from 'react'
-
+import { Routes, Route } from 'react-router-dom';
+import GearList from './GearList';
+import InventoryDashboard from './InventoryDashboard';
+import Header from './Header';
+import React from 'react';
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
     <>
-    <GearList/>
-    
-   </>
-  )
+      <Header />
+      <Routes>
+        <Route path="/" element={<GearList />} />
+        <Route path='/roadgear' element={<GearList/>}/>
+        <Route path="/inventory" element={<InventoryDashboard />} />
+      </Routes>
+    </>
+  );
 }
 
-export default App
+export default App;
