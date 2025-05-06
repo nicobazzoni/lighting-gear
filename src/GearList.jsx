@@ -7,9 +7,9 @@ const urlFor = (source) => builder.image(source);
 
 const unitTypes = [
   'Daylights', 'Lustr', 'Rush Movers', 'Freedom PARs', 'Mac Auras',
-  'AXIOs', 'AX9s', 'AX100s', 'AX50s', 'Pavo Tubes', 'Makeup Kits',
-  'Lyra', 'Pixel Bricks', 'AX3s', 'Forza 150s', 'Jabs', 'Punches',
-  'S60s', 'S30s'
+  'AX1Os', 'AX9s', 'AX50s', 'Pavo Tubes', 'Makeup Kits',
+  'Lyras', 'Pixel Bricks', 'AX3s', 'Forza 150s', 
+  'S60s', 'S30s', 'Aadyntech Jabs','Aadyntech Punches'
 ];
 
 export default function GearList() {
