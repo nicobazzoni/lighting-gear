@@ -1,0 +1,75 @@
+import React, { useState, useCallback, useRef } from 'react';
+import {
+  GoogleMap,
+  Marker,
+  useLoadScript,
+  Autocomplete
+} from '@react-google-maps/api';
+
+const libraries = ['places'];
+const mapContainerStyle = { width: '100%', height: '300px' };
+const defaultCenter = { lat: 40.7128, lng: -74.006 }; // New York fallback
+
+export default function LocationPicker({ onLocationSelect }) {
+  const { isLoaded, loadError } = useLoadScript({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+    libraries
+  });
+
+  const [marker, setMarker] = useState(null);
+  const autocompleteRef = useRef(null);
+
+  const handleMapClick = useCallback((e) => {
+    const coords = {
+      lat: e.latLng.lat(),
+      lng: e.latLng.lng()
+    };
+    setMarker(coords);
+    onLocationSelect(coords);
+  }, [onLocationSelect]);
+
+  const handlePlaceChanged = () => {
+    const place = autocompleteRef.current?.getPlace();
+    if (!place?.geometry) return;
+
+    const lat = place.geometry.location.lat();
+    const lng = place.geometry.location.lng();
+
+    const address = place.address_components || [];
+
+    const city = address.find(c => c.types.includes("locality"))?.long_name;
+    const state = address.find(c => c.types.includes("administrative_area_level_1"))?.short_name;
+    const country = address.find(c => c.types.includes("country"))?.short_name;
+
+    const locationName = [city, state || country].filter(Boolean).join(', ');
+
+    setMarker({ lat, lng }); // updates map marker
+    onLocationSelect({ lat, lng, locationName }); // passes data back to BookingForm
+  };
+
+  if (loadError) return <p className="text-red-600">Error loading map</p>;
+  if (!isLoaded) return <p>Loading map...</p>;
+
+  return (
+    <>
+      <Autocomplete
+        onLoad={(ref) => (autocompleteRef.current = ref)}
+        onPlaceChanged={handlePlaceChanged}
+      >
+        <input
+          type="text"
+          placeholder="Search for a place"
+          className="border px-2 py-1 mb-2 w-full"
+        />
+      </Autocomplete>
+      <GoogleMap
+        mapContainerStyle={mapContainerStyle}
+        zoom={8}
+        center={marker || defaultCenter}
+        onClick={handleMapClick}
+      >
+        {marker && <Marker position={marker} />}
+      </GoogleMap>
+    </>
+  );
+}

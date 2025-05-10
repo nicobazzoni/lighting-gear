@@ -9,6 +9,7 @@ export default function Header() {
         <nav className="space-x-4">
           <Link to="/roadgear" className="hover:underline">Road Gear</Link>
           <Link to="/inventory" className="hover:underline">Inventory</Link>
+          <Link to="/eventslist" className="hover:underline">Booked Events</Link>
         </nav>
       </div>
     </header>

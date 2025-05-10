@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { client } from '../sanityClient';
 import imageUrlBuilder from '@sanity/image-url';
-
+import BookingForm from './Booking';
+import { Link } from 'react-router-dom'; 
+import { useNavigate } from 'react-router-dom';
 const builder = imageUrlBuilder(client);
 const urlFor = (source) => builder.image(source);
 
@@ -15,6 +17,11 @@ const unitTypes = [
 export default function GearList() {
   const [types, setTypes] = useState([]);
   const [selected, setSelected] = useState([]);
+  const [bookingType, setBookingType] = useState(null);
+
+ 
+
+
 
   useEffect(() => {
     client.fetch(`*[_type == "gearType"] | order(name asc) {
@@ -59,13 +66,15 @@ export default function GearList() {
         ))}
       </div>
 
+    
+
       {filtered.length === 0 && (
         <p className="text-center text-gray-500">Select unit types above to view gear.</p>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filtered.map((type) => (
-          <div key={type._id} className="border p-4 rounded shadow">
+          <div key={type._id} className="border p-4 rounded shadow relative bg-white">
             {type.defaultImage ? (
               <img
                 src={urlFor(type.defaultImage).width(400).url()}
@@ -77,7 +86,12 @@ export default function GearList() {
                 No Image
               </div>
             )}
-            <h2 className="text-xl font-semibold">{type.name}</h2>
+            
+           <h2 className="text-xl font-semibold">
+         <Link to={`/gear/${type._id}`} className="text-blue-600 hover:underline">
+          {type.name}
+           </Link>
+          </h2>
             <p><strong>Total Units:</strong> {type.count}</p>
             <p className={
               type.status === 'Available' ? 'text-green-600' :
@@ -87,6 +101,24 @@ export default function GearList() {
               <strong>Status:</strong> {type.status}
             </p>
             {type.description && <p className="text-sm mt-2">{type.description}</p>}
+
+            <button
+              onClick={() => setBookingType(type)}
+              className="absolute bottom-4 right-4 px-3 py-1 text-sm bg-blue-600 text-white rounded"
+            >
+              Book
+            </button>
+
+            {bookingType?._id === type._id && (
+              <div className="mt-4">
+                <BookingForm
+                  preselectedGearType={bookingType}
+                  onClose={() => setBookingType(null)}
+                />
+              </div>
+            )}
+
+            
           </div>
         ))}
       </div>

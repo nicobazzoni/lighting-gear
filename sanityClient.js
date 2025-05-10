@@ -6,4 +6,5 @@ export const client = createClient({
   apiVersion: '2023-01-01',
   useCdn: false,
   token: import.meta.env.VITE_SANITY_WRITE_TOKEN // if needed
+  
 })
