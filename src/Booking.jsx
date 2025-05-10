@@ -3,19 +3,17 @@ import { client } from '../sanityClient';
 import { eachDayOfInterval, formatISO } from 'date-fns';
 import LocationPicker from './LocationPicker';
 import React from 'react';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
-export default function BookingForm({ preselectedGearType, onClose }) {
-  const [quantity, setQuantity] = useState(1);
-  const [notes, setNotes] = useState('');
-  const [status] = useState('confirmed');
+export default function BookingForm({ selectedGearTypes, onClose }) {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
-
-  const [locationCoords, setLocationCoords] = useState(null); // lat/lng
-  const [locationName, setLocationName] = useState(''); // city, state
-
+  const [locationName, setLocationName] = useState('');
+const navigate = useNavigate()
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -26,74 +24,85 @@ export default function BookingForm({ preselectedGearType, onClose }) {
       start.setHours(0, 0, 0, 0);
       end.setHours(0, 0, 0, 0);
 
-      const overlappingBookings = await client.fetch(
-        `*[_type == "booking" && gearType._ref == $gearId &&
-           !((endDate <= $start) || (startDate >= $end))]`,
-        {
-          gearId: preselectedGearType._id,
-          start: formatISO(start),
-          end: formatISO(end),
-        }
-      );
+      for (const gear of selectedGearTypes) {
+        const quantity = gear.count;
 
-      const requestedDays = eachDayOfInterval({ start, end });
-      const dailyBookedMap = {};
+        const overlappingBookings = await client.fetch(
+          `*[_type == "booking" && gearType._ref == $gearId && !((endDate <= $start) || (startDate >= $end))]`,
+          {
+            gearId: gear._id,
+            start: formatISO(start),
+            end: formatISO(end),
+          }
+        );
 
-      for (let booking of overlappingBookings) {
-        const bStart = new Date(booking.startDate);
-        const bEnd = new Date(booking.endDate);
-        const days = eachDayOfInterval({ start: bStart, end: bEnd });
-        for (let d of days) {
-          const key = d.toISOString().split('T')[0];
-          dailyBookedMap[key] = (dailyBookedMap[key] || 0) + booking.quantity;
+        const requestedDays = eachDayOfInterval({ start, end });
+        const dailyBookedMap = {};
+
+        for (let booking of overlappingBookings) {
+          const bStart = new Date(booking.startDate);
+          const bEnd = new Date(booking.endDate);
+          const days = eachDayOfInterval({ start: bStart, end: bEnd });
+          for (let d of days) {
+            const key = d.toISOString().split('T')[0];
+            dailyBookedMap[key] = (dailyBookedMap[key] || 0) + booking.quantity;
+          }
         }
+
+        for (let day of requestedDays) {
+          const key = day.toISOString().split('T')[0];
+          const alreadyBooked = dailyBookedMap[key] || 0;
+          if (alreadyBooked + quantity > gear.count) {
+            setMessage(`❌ Not enough ${gear.name} units on ${key}.`);
+            setSubmitting(false);
+            return;
+          }
+        }
+
+        await client.create({
+          _type: 'booking',
+          gearType: { _type: 'reference', _ref: gear._id },
+          quantity,
+          locationName,
+          startDate,
+          endDate,
+          status: 'confirmed',
+          notes,
+          
+        });
+        toast.success(`✅ Booked ${gear.name} for ${locationName}`, {
+            position: 'bottom-right',
+            autoClose: 3000,
+            hideProgressBar: false,
+            pauseOnHover: true,
+          });
+          navigate('/events'); 
+ 
       }
 
-      let conflictDay = null;
-      for (let day of requestedDays) {
-        const key = day.toISOString().split('T')[0];
-        const alreadyBooked = dailyBookedMap[key] || 0;
-        const totalAvailable = preselectedGearType.count || 0;
-
-        if (alreadyBooked + quantity > totalAvailable) {
-          conflictDay = key;
-          break;
-        }
-      }
-
-      if (conflictDay) {
-        setMessage(`❌ Not enough units on ${conflictDay}.`);
-        setSubmitting(false);
-        return;
-      }
-
-      await client.create({
-        _type: 'booking',
-        gearType: { _type: 'reference', _ref: preselectedGearType._id },
-        quantity,
-        locationName, // ✅ THIS is what gets saved
-        startDate,
-        endDate,
-        status,
-        notes,
-      });
-
-      setMessage('✅ Booking submitted!');
+     
+      
       setTimeout(() => {
         setMessage('');
         onClose();
       }, 1200);
     } catch (err) {
       console.error(err);
-      setMessage('❌ Error creating booking.');
+      toast.error('❌ Failed to book. Try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 border rounded bg-white mt-4 space-y-3">
-      <h3 className="font-bold text-lg">Book: {preselectedGearType.name}</h3>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h3 className="text-xl font-bold">Booking Details</h3>
+
+      {selectedGearTypes.map((gear) => (
+        <div key={gear._id}>
+          <strong>{gear.name}:</strong> {gear.count} units
+        </div>
+      ))}
 
       <div>
         <label>Start Date:</label>
@@ -117,27 +126,12 @@ export default function BookingForm({ preselectedGearType, onClose }) {
         />
       </div>
 
-      <div>
-        <label>Quantity:</label>
-        <input
-          type="number"
-          value={quantity}
-          onChange={(e) => setQuantity(+e.target.value)}
-          min={1}
-          max={preselectedGearType.count}
-          className="border p-1 ml-2"
-        />
-      </div>
-
       <LocationPicker
-  onLocationSelect={({ lat, lng, locationName }) => {
-    setLocationCoords({ lat, lng });
-    setLocationName(locationName);
-  }}
-/>
+        onLocationSelect={({ lat, lng, locationName }) => setLocationName(locationName)}
+      />
 
       <div>
-        <label>Notes (optional):</label>
+        <label>Notes:</label>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}

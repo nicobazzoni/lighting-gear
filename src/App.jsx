@@ -7,6 +7,8 @@ import GearCalendar from './GearCalendar';
 import BookingForm from './Booking';
 import GearDetail from './GearDetail';
 import UpcomingEventsList from './UpcomingEventList';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 function App() {
   return (
     <>
@@ -18,8 +20,10 @@ function App() {
         <Route path="/gearcalendar" element={<GearCalendar />} />
         <Route path="/bookingform" element={<BookingForm />} />
         <Route path="/gear/:gearId" element={<GearDetail />} />
-        <Route path="/eventslist" element={<UpcomingEventsList />} />
+        <Route path="/events" element={<UpcomingEventsList />} />
+
       </Routes>
+      <ToastContainer position="top-center" autoClose={2000} />
     </>
   );
 }
