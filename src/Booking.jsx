@@ -6,14 +6,15 @@ import React from 'react';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 
-export default function BookingForm({ selectedGearTypes, onClose }) {
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+export default function BookingForm({ selectedGearTypes = [], onClose, startDate, endDate }) {
+
+
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [locationName, setLocationName] = useState('');
-const navigate = useNavigate()
+  const navigate = useNavigate();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -25,7 +26,7 @@ const navigate = useNavigate()
       end.setHours(0, 0, 0, 0);
 
       for (const gear of selectedGearTypes) {
-        const quantity = gear.count;
+        const quantity = gear.count || 0;
 
         const overlappingBookings = await client.fetch(
           `*[_type == "booking" && gearType._ref == $gearId && !((endDate <= $start) || (startDate >= $end))]`,
@@ -68,20 +69,18 @@ const navigate = useNavigate()
           endDate,
           status: 'confirmed',
           notes,
-          
         });
+
         toast.success(`✅ Booked ${gear.name} for ${locationName}`, {
-            position: 'bottom-right',
-            autoClose: 3000,
-            hideProgressBar: false,
-            pauseOnHover: true,
-          });
-          navigate('/events'); 
- 
+          position: 'bottom-right',
+          autoClose: 3000,
+          hideProgressBar: false,
+          pauseOnHover: true,
+        });
       }
 
-     
-      
+      navigate('/events');
+
       setTimeout(() => {
         setMessage('');
         onClose();
@@ -104,27 +103,7 @@ const navigate = useNavigate()
         </div>
       ))}
 
-      <div>
-        <label>Start Date:</label>
-        <input
-          type="datetime-local"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          required
-          className="border p-1 ml-2"
-        />
-      </div>
-
-      <div>
-        <label>End Date:</label>
-        <input
-          type="datetime-local"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          required
-          className="border p-1 ml-2"
-        />
-      </div>
+      
 
       <LocationPicker
         onLocationSelect={({ lat, lng, locationName }) => setLocationName(locationName)}

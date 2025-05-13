@@ -57,14 +57,14 @@ export default function InventoryDashboard() {
                 )}
                 <p><strong>Profile:</strong> {item.gearProfile?.name || 'Unknown'}</p>
                 <p><strong>Count:</strong> {item.count}</p>
-                {item.gearProfile?._id && (
+                {/* {item.gearProfile?._id && (
                   <Link
                     to={`/gear/${item.gearProfile._id}`}
                     className="text-blue-600 hover:underline text-sm mt-1 inline-block"
                   >
                     View Detail →
                   </Link>
-                )}
+                )} */}
               </div>
             ))}
           </div>
