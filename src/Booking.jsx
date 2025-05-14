@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function BookingForm({ selectedGearTypes = [], onClose, startDate, endDate }) {
 
-
+  
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
@@ -18,16 +18,21 @@ export default function BookingForm({ selectedGearTypes = [], onClose, startDate
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-
+    console.log('🚀 Submit triggered');
+  
     try {
       const start = new Date(startDate);
       const end = new Date(endDate);
       start.setHours(0, 0, 0, 0);
       end.setHours(0, 0, 0, 0);
-
+  
+      console.log('📅 Start:', start.toISOString(), 'End:', end.toISOString());
+      console.log('📦 Selected gear:', selectedGearTypes);
+  
       for (const gear of selectedGearTypes) {
         const quantity = gear.count || 0;
-
+        console.log(`🔎 Checking gear: ${gear.name}, Qty: ${quantity}`);
+  
         const overlappingBookings = await client.fetch(
           `*[_type == "booking" && gearType._ref == $gearId && !((endDate <= $start) || (startDate >= $end))]`,
           {
@@ -36,10 +41,12 @@ export default function BookingForm({ selectedGearTypes = [], onClose, startDate
             end: formatISO(end),
           }
         );
-
+  
+        console.log(`📊 Overlapping bookings for ${gear.name}:`, overlappingBookings);
+  
         const requestedDays = eachDayOfInterval({ start, end });
         const dailyBookedMap = {};
-
+  
         for (let booking of overlappingBookings) {
           const bStart = new Date(booking.startDate);
           const bEnd = new Date(booking.endDate);
@@ -49,18 +56,19 @@ export default function BookingForm({ selectedGearTypes = [], onClose, startDate
             dailyBookedMap[key] = (dailyBookedMap[key] || 0) + booking.quantity;
           }
         }
-
+  
         for (let day of requestedDays) {
           const key = day.toISOString().split('T')[0];
           const alreadyBooked = dailyBookedMap[key] || 0;
           if (alreadyBooked + quantity > gear.count) {
+            console.warn(`❌ Not enough ${gear.name} on ${key}`);
             setMessage(`❌ Not enough ${gear.name} units on ${key}.`);
             setSubmitting(false);
             return;
           }
         }
-
-        await client.create({
+  
+        const newBooking = {
           _type: 'booking',
           gearType: { _type: 'reference', _ref: gear._id },
           quantity,
@@ -69,8 +77,11 @@ export default function BookingForm({ selectedGearTypes = [], onClose, startDate
           endDate,
           status: 'confirmed',
           notes,
-        });
-
+        };
+  
+        console.log('📤 Creating booking:', newBooking);
+        await client.create(newBooking);
+  
         toast.success(`✅ Booked ${gear.name} for ${locationName}`, {
           position: 'bottom-right',
           autoClose: 3000,
@@ -78,15 +89,17 @@ export default function BookingForm({ selectedGearTypes = [], onClose, startDate
           pauseOnHover: true,
         });
       }
-
+  
+      console.log('✅ All bookings created, navigating to /events');
       navigate('/events');
-
+  
       setTimeout(() => {
         setMessage('');
+        console.log('🔙 Closing booking form');
         onClose();
       }, 1200);
     } catch (err) {
-      console.error(err);
+      console.error('❌ Booking error:', err);
       toast.error('❌ Failed to book. Try again.');
     } finally {
       setSubmitting(false);

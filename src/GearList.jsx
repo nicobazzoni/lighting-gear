@@ -3,21 +3,13 @@ import { client } from '../sanityClient';
 import imageUrlBuilder from '@sanity/image-url';
 import BookingForm from './Booking';
 import { Link } from 'react-router-dom';
-import React from 'react'
+import React from 'react';
 
 const builder = imageUrlBuilder(client);
 const urlFor = (source) => builder.image(source);
 
-const unitTypes = [
-  'Daylights', 'Lustr', 'Rush Movers', 'Freedom PARs', 'Mac Auras',
-  'AX1Os', 'AX9s', 'AX50s', 'Pavo Tubes', 'Makeup Kits',
-  'Lyras', 'Pixel Bricks', 'AX3s', 'Forza 150s', 
-  'S60s', 'S30s', 'Aadyntech Jabs','Aadyntech Punches'
-];
-
 export default function GearList() {
   const [types, setTypes] = useState([]);
-  const [selected, setSelected] = useState([]);
   const [bookingGear, setBookingGear] = useState([]);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -141,7 +133,7 @@ export default function GearList() {
       {bookingGear.length > 0 && (
         <div className="mt-10 border-t pt-6">
           <BookingForm
-            selectedGear={bookingGear.filter((g) => g.count > 0)}
+            selectedGearTypes={bookingGear.filter((g) => g.count > 0)}
             onClose={() => setBookingGear([])}
             startDate={startDate}
             endDate={endDate}
