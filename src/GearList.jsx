@@ -34,7 +34,8 @@ export default function GearList() {
         const totalBooked = gear.booked.reduce((sum, b) => sum + b.quantity, 0);
         return {
           ...gear,
-          availableCount: gear.count - totalBooked
+          availableCount: gear.count - totalBooked, // for UI display
+          originalCount: gear.count                // for internal logic
         };
       }).filter(g => g.availableCount > 0);
 
@@ -47,11 +48,23 @@ export default function GearList() {
   const handleCountChange = (id, value) => {
     setBookingGear((prev) => {
       const existing = prev.find((g) => g._id === id);
+      const gear = types.find((t) => t._id === id); // make sure we have access to `gear`
+  
+      if (!gear) return prev;
+  
       if (existing) {
-        return prev.map((g) => g._id === id ? { ...g, count: +value } : g);
+        return prev.map((g) =>
+          g._id === id ? { ...g, count: +value } : g
+        );
       } else {
-        const gear = types.find((t) => t._id === id);
-        return [...prev, { ...gear, count: +value }];
+        return [
+          ...prev,
+          {
+            ...gear,
+            count: +value,
+            countOriginal: gear.count, // assuming you updated your `types` to keep both
+          },
+        ];
       }
     });
   };

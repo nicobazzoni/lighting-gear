@@ -56,15 +56,16 @@ export default function BookingForm({ selectedGearTypes = [], onClose, startDate
             dailyBookedMap[key] = (dailyBookedMap[key] || 0) + booking.quantity;
           }
         }
-  
         for (let day of requestedDays) {
           const key = day.toISOString().split('T')[0];
-          const alreadyBooked = dailyBookedMap[key] || 0;
-          if (alreadyBooked + quantity > gear.count) {
-            console.warn(`❌ Not enough ${gear.name} on ${key}`);
-            setMessage(`❌ Not enough ${gear.name} units on ${key}.`);
-            setSubmitting(false);
-            return;
+          dailyBookedMap[key] = 0;
+        
+          for (let booking of overlappingBookings) {
+            const bStart = new Date(booking.startDate);
+            const bEnd = new Date(booking.endDate);
+            if (day >= bStart && day <= bEnd) {
+              dailyBookedMap[key] += booking.quantity;
+            }
           }
         }
   
