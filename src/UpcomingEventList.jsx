@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
 import { client } from '../sanityClient';
-import { format } from 'date-fns';
+import { format, startOfToday } from 'date-fns';
 import React from 'react';
 
 export default function UpcomingEventsList() {
-  const [groupedEvents, setGroupedEvents] = useState({});
+  const [groupedEvents, setGroupedEvents] = useState({ upcoming: {}, past: {} });
   const [editing, setEditing] = useState(null);
   const [refresh, setRefresh] = useState(false);
 
   useEffect(() => {
     client
-      .fetch(`*[_type == "booking" && startDate >= now()] | order(locationName asc, startDate asc) {
+      .fetch(`*[_type == "booking"] | order(startDate asc) {
         _id,
         locationName,
         startDate,
@@ -19,49 +19,55 @@ export default function UpcomingEventsList() {
         gearType->{ name }
       }`)
       .then((data) => {
-        const grouped = {};
+        const upcoming = {};
+        const past = {};
+        const today = startOfToday();
 
         data.forEach((item) => {
           const location = item.locationName || 'Unknown Location';
+          const gearName = item.gearType?.name || 'Unknown Gear';
 
-          if (!grouped[location]) {
-            grouped[location] = {
-              startDate: new Date(item.startDate),
-              endDate: new Date(item.endDate),
+          const start = new Date(item.startDate);
+          const end = new Date(item.endDate);
+
+          // Determine whether the booking is past or upcoming
+          const isPast = end < today;
+          const target = isPast ? past : upcoming;
+
+          if (!target[location]) {
+            target[location] = {
+              startDate: start,
+              endDate: end,
               gearMap: {},
             };
           }
 
-          const group = grouped[location];
-          if (new Date(item.startDate) < group.startDate) group.startDate = new Date(item.startDate);
-          if (new Date(item.endDate) > group.endDate) group.endDate = new Date(item.endDate);
+          const group = target[location];
+          if (start < group.startDate) group.startDate = start;
+          if (end > group.endDate) group.endDate = end;
 
-          const gearName = item.gearType?.name || 'Unknown Gear';
-          if (!group.gearMap[gearName]) {
-            group.gearMap[gearName] = [];
-          }
-          group.gearMap[gearName].push(item); // 👈 store full booking
+          if (!group.gearMap[gearName]) group.gearMap[gearName] = [];
+          group.gearMap[gearName].push(item);
         });
 
-        setGroupedEvents(grouped);
+        setGroupedEvents({ upcoming, past });
       });
   }, [refresh]);
-
-  const handleUpdate = () => {
-    setEditing(null);
-    setRefresh(prev => !prev);
-  };
 
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-6">Upcoming Events by Location</h2>
-      {Object.entries(groupedEvents).map(([location, info]) => (
-        <div key={location} className="mb-8">
+      {Object.keys(groupedEvents.upcoming).length === 0 && (
+        <p className="text-gray-500">No upcoming bookings found.</p>
+      )}
+
+      {Object.entries(groupedEvents.upcoming).map(([location, info]) => (
+        <div key={location} className="mb-8 border-b pb-4">
           <h3 className="text-xl font-semibold mb-1">📍 {location}</h3>
           <p className="text-sm text-gray-600 mb-2">
             📅 {format(info.startDate, 'MMM d')} – {format(info.endDate, 'MMM d')}
           </p>
-          {Object.entries(info.gearMap).map(([gearName, bookings]) => (
+          {Object.entries(info.gearMap || {}).map(([gearName, bookings]) => (
             <div key={gearName} className="mb-2 ml-4">
               <strong>{gearName}</strong>
               <ul className="list-disc ml-5">
@@ -83,7 +89,36 @@ export default function UpcomingEventsList() {
         </div>
       ))}
 
-      {editing && <EditEventModal booking={editing} onClose={handleUpdate} />}
+      <hr className="my-8" />
+
+      <h2 className="text-2xl font-bold mb-6">Past Events by Location</h2>
+      {Object.keys(groupedEvents.past).length === 0 && (
+        <p className="text-gray-500">No past bookings found.</p>
+      )}
+
+      {Object.entries(groupedEvents.past).map(([location, info]) => (
+        <div key={location} className="mb-8 border-b pb-4">
+          <h3 className="text-xl font-semibold mb-1">📍 {location}</h3>
+          <p className="text-sm text-gray-600 mb-2">
+            📅 {format(info.startDate, 'MMM d')} – {format(info.endDate, 'MMM d')}
+          </p>
+          {Object.entries(info.gearMap || {}).map(([gearName, bookings]) => (
+            <div key={gearName} className="mb-2 ml-4">
+              <strong>{gearName}</strong>
+              <ul className="list-disc ml-5">
+                {bookings.map((b) => (
+                  <li key={b._id}>
+                    {b.quantity} unit{b.quantity > 1 ? 's' : ''} (
+                    {format(new Date(b.startDate), 'MMM d')} - {format(new Date(b.endDate), 'MMM d')})
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      ))}
+
+      {editing && <EditEventModal booking={editing} onClose={() => setEditing(null)} />}
     </div>
   );
 }

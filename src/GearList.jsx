@@ -4,6 +4,7 @@ import imageUrlBuilder from '@sanity/image-url';
 import BookingForm from './Booking';
 import { Link } from 'react-router-dom';
 import React from 'react';
+import AIInput from './AIInput';
 
 const builder = imageUrlBuilder(client);
 const urlFor = (source) => builder.image(source);
@@ -13,6 +14,7 @@ export default function GearList() {
   const [bookingGear, setBookingGear] = useState([]);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [useAI, setUseAI] = useState(false);
 
   useEffect(() => {
     if (!startDate || !endDate) return;
@@ -34,37 +36,29 @@ export default function GearList() {
         const totalBooked = gear.booked.reduce((sum, b) => sum + b.quantity, 0);
         return {
           ...gear,
-          availableCount: gear.count - totalBooked, // for UI display
-          originalCount: gear.count                // for internal logic
+          availableCount: gear.count - totalBooked,
+          originalCount: gear.count
         };
       }).filter(g => g.availableCount > 0);
 
       setTypes(filtered);
     };
-
+console.log('📦 Selected gear:', selectedGearTypes);
     fetchAvailableGear();
   }, [startDate, endDate]);
 
   const handleCountChange = (id, value) => {
     setBookingGear((prev) => {
       const existing = prev.find((g) => g._id === id);
-      const gear = types.find((t) => t._id === id); // make sure we have access to `gear`
-  
+      const gear = types.find((t) => t._id === id);
       if (!gear) return prev;
-  
+
       if (existing) {
         return prev.map((g) =>
           g._id === id ? { ...g, count: +value } : g
         );
       } else {
-        return [
-          ...prev,
-          {
-            ...gear,
-            count: +value,
-            countOriginal: gear.count, // assuming you updated your `types` to keep both
-          },
-        ];
+        return [...prev, { ...gear, count: +value, countOriginal: gear.count }];
       }
     });
   };
@@ -73,27 +67,53 @@ export default function GearList() {
     <div className="p-6">
       <h1 className="text-3xl font-bold mb-6 text-center">Select Date Range to View Available Gear</h1>
 
-      <div className="flex flex-col md:flex-row gap-4 justify-center mb-6">
-        <div>
-          <label>Start Date:</label>
-          <input
-            type="datetime-local"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="border p-1 ml-2"
-          />
-        </div>
+      {/* <div className="text-center mb-4">
+        <button
+          onClick={() => setUseAI((prev) => !prev)}
+          className="px-4 py-2 bg-indigo-600 text-white rounded"
+        >
+          {useAI ? 'Switch to Manual Booking' : 'Use AI to Book Gear'}
+        </button>
+      </div> */}
 
-        <div>
-          <label>End Date:</label>
-          <input
-            type="datetime-local"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="border p-1 ml-2"
-          />
+      {useAI ? (
+        <AIInput onParsedResult={(parsed) => {
+          console.log('🧠 AI returned:', parsed);
+          setStartDate(parsed.startDate);
+          setEndDate(parsed.endDate);
+
+          const matchedGear = parsed.gearTypes.map((item) => {
+            const gearType = types.find((g) =>
+              g.name.toLowerCase().includes(item.name.toLowerCase())
+            );
+            return gearType ? { ...gearType, count: item.count } : null;
+          }).filter(Boolean);
+
+          setBookingGear(matchedGear);
+        }} />
+      ) : (
+        <div className="flex flex-col md:flex-row gap-4 justify-center mb-6">
+          <div>
+            <label>Start Date:</label>
+            <input
+              type="datetime-local"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="border p-1 ml-2"
+            />
+          </div>
+
+          <div>
+            <label>End Date:</label>
+            <input
+              type="datetime-local"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="border p-1 ml-2"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {types.length === 0 && (
         <p className="text-center text-gray-500">Select a valid date range to load available gear.</p>
