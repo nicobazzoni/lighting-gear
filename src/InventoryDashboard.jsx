@@ -37,7 +37,7 @@ export default function InventoryDashboard() {
 
   return (
     <div className="p-6">
-      <h1 className="text-3xl font-bold mb-6">Inventory by Studio</h1>
+      <h1 className="text-3xl font-bold mb-6">Inventory by Location</h1>
       {Object.entries(groupedByLocation).map(([loc, items]) => (
         <div key={loc} className="mb-6">
           <h2 className="text-xl font-semibold mb-2">{loc.replace('-', '/').toUpperCase()}</h2>
@@ -57,14 +57,14 @@ export default function InventoryDashboard() {
                 )}
                 <p><strong>Profile:</strong> {item.gearProfile?.name || 'Unknown'}</p>
                 <p><strong>Count:</strong> {item.count}</p>
-                {/* {item.gearProfile?._id && (
+                {item.gearProfile?._id && (
                   <Link
                     to={`/gear/${item.gearProfile._id}`}
                     className="text-blue-600 hover:underline text-sm mt-1 inline-block"
                   >
                     View Detail →
                   </Link>
-                )} */}
+                )}
               </div>
             ))}
           </div>

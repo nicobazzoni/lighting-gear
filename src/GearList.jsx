@@ -15,6 +15,8 @@ export default function GearList() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [useAI, setUseAI] = useState(false);
+ 
+  const [ search, setSearch] = useState()
 
   useEffect(() => {
     if (!startDate || !endDate) return;
@@ -43,7 +45,7 @@ export default function GearList() {
 
       setTypes(filtered);
     };
-console.log('📦 Selected gear:', selectedGearTypes);
+
     fetchAvailableGear();
   }, [startDate, endDate]);
 

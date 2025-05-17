@@ -72,7 +72,7 @@ export default function UpcomingEventsList() {
               <strong>{gearName}</strong>
               <ul className="list-disc ml-5">
                 {bookings.map((b) => (
-                  <li key={b._id}>
+                  <li key={b._id}id={b._id}>
                     {b.quantity} unit{b.quantity > 1 ? 's' : ''} (
                     {format(new Date(b.startDate), 'MMM d')} - {format(new Date(b.endDate), 'MMM d')})
                     <button
