@@ -4,7 +4,6 @@ import imageUrlBuilder from '@sanity/image-url';
 import BookingForm from './Booking';
 import { Link } from 'react-router-dom';
 import React from 'react';
-import AIInput from './AIInput';
 
 const builder = imageUrlBuilder(client);
 const urlFor = (source) => builder.image(source);
@@ -14,9 +13,6 @@ export default function GearList() {
   const [bookingGear, setBookingGear] = useState([]);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [useAI, setUseAI] = useState(false);
- 
-  const [ search, setSearch] = useState()
 
   useEffect(() => {
     if (!startDate || !endDate) return;
@@ -69,51 +65,37 @@ export default function GearList() {
     <div className="p-6">
       <h1 className="text-3xl font-bold mb-6 text-center">Select Date Range to View Available Gear</h1>
 
-      {/* <div className="text-center mb-4">
-        <button
-          onClick={() => setUseAI((prev) => !prev)}
-          className="px-4 py-2 bg-indigo-600 text-white rounded"
-        >
-          {useAI ? 'Switch to Manual Booking' : 'Use AI to Book Gear'}
-        </button>
-      </div> */}
+      <div className="flex flex-col md:flex-row gap-4 justify-center mb-6">
+        <div>
+          <label>Start Date:</label>
+          <input
+            type="datetime-local"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="border p-1 ml-2"
+          />
+        </div>
 
-      {useAI ? (
-        <AIInput onParsedResult={(parsed) => {
-          console.log('🧠 AI returned:', parsed);
-          setStartDate(parsed.startDate);
-          setEndDate(parsed.endDate);
+        <div>
+          <label>End Date:</label>
+          <input
+            type="datetime-local"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="border p-1 ml-2"
+          />
+        </div>
+      </div>
 
-          const matchedGear = parsed.gearTypes.map((item) => {
-            const gearType = types.find((g) =>
-              g.name.toLowerCase().includes(item.name.toLowerCase())
-            );
-            return gearType ? { ...gearType, count: item.count } : null;
-          }).filter(Boolean);
-
-          setBookingGear(matchedGear);
-        }} />
-      ) : (
-        <div className="flex flex-col md:flex-row gap-4 justify-center mb-6">
-          <div>
-            <label>Start Date:</label>
-            <input
-              type="datetime-local"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="border p-1 ml-2"
-            />
-          </div>
-
-          <div>
-            <label>End Date:</label>
-            <input
-              type="datetime-local"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="border p-1 ml-2"
-            />
-          </div>
+      {/* Booking form at top */}
+      {startDate && endDate && (
+        <div className="mt-6 border-t pt-6">
+          <BookingForm
+            selectedGearTypes={bookingGear}
+            onClose={() => setBookingGear([])}
+            startDate={startDate}
+            endDate={endDate}
+          />
         </div>
       )}
 
@@ -164,17 +146,6 @@ export default function GearList() {
           </div>
         ))}
       </div>
-
-      {bookingGear.length > 0 && (
-        <div className="mt-10 border-t pt-6">
-          <BookingForm
-            selectedGearTypes={bookingGear.filter((g) => g.count > 0)}
-            onClose={() => setBookingGear([])}
-            startDate={startDate}
-            endDate={endDate}
-          />
-        </div>
-      )}
     </div>
   );
 }

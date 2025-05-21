@@ -3,12 +3,15 @@ import { client } from '../sanityClient';
 import { format, startOfToday } from 'date-fns';
 import React from 'react';
 import { useNavigate } from 'react-router';
+import EditBookingModal from './EditBookingModal';
 
 export default function UpcomingEventsList() {
   const [groupedEvents, setGroupedEvents] = useState({ upcoming: {}, past: {} });
   const [refresh, setRefresh] = useState(false);
   const navigate = useNavigate();
+  const [updating, setUpdating] = useState(false);
 
+  
   useEffect(() => {
     client.fetch(`*[_type == "booking"] | order(startDate asc) {
       _id,
@@ -85,18 +88,20 @@ export default function UpcomingEventsList() {
       {Object.entries(groupedEvents.upcoming).map(([groupKey, info]) => (
         <div key={groupKey} className="mb-8 border-b pb-4">
           <h3 className="text-xl font-semibold mb-1">📍 {info.location}</h3>
+          
           <button
-            onClick={() => {
-              navigate('/bookingform', {
-                state: {
-                  bookingIds: info.allBookings.map((b) => b._id),
-                },
-              });
-            }}
-            className="text-yellow-600 text-sm underline"
-          >
-            Edit Event
-          </button>
+  onClick={() => {
+    const ids = info.allBookings?.map((b) => b._id) || [];
+    if (ids.length === 0) return;
+
+    navigate('/edit-booking', {
+      state: { bookingIds: ids },
+    });
+  }}
+  className="text-yellow-600 text-sm underline"
+>
+  Edit Event
+</button>
 
           <p className="text-sm italic text-gray-500">{info.fullAddress || 'No address'}</p>
 

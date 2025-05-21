@@ -8,6 +8,8 @@ import BookingForm from './Booking';
 import GearDetail from './GearDetail';
 import UpcomingEventsList from './UpcomingEventList';
 import { ToastContainer } from 'react-toastify';
+import EditBookingModal from './EditBookingModal';
+
 import 'react-toastify/dist/ReactToastify.css';
 function App() {
   return (
@@ -21,6 +23,7 @@ function App() {
         <Route path="/bookingform" element={<BookingForm />} />
         <Route path="/gear/:gearId" element={<GearDetail />} />
         <Route path="/events" element={<UpcomingEventsList />} />
+        <Route path="/edit-booking" element={<EditBookingModal />} />
 
       </Routes>
       <ToastContainer position="top-center" autoClose={2000} />
