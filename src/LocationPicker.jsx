@@ -26,6 +26,7 @@ export default function LocationPicker({ onLocationSelect }) {
 
     const lat = place.geometry.location.lat();
     const lng = place.geometry.location.lng();
+    const fullAddress = place.formatted_address;
 
     const address = place.address_components || [];
     const city = address.find(c => c.types.includes('locality'))?.long_name;
@@ -36,7 +37,8 @@ export default function LocationPicker({ onLocationSelect }) {
     setMarker({ lat, lng });
     if (inputRef.current) inputRef.current.value = locationName;
 
-    onLocationSelect({ lat, lng, locationName });
+    // ✅ Include fullAddress
+    onLocationSelect({ lat, lng, locationName, fullAddress });
   };
 
   const handleMapClick = useCallback(async (e) => {
@@ -49,8 +51,9 @@ export default function LocationPicker({ onLocationSelect }) {
     );
     const data = await res.json();
     const place = data.results?.[0];
-    const address = place?.address_components || [];
+    const fullAddress = place?.formatted_address;
 
+    const address = place?.address_components || [];
     const city = address.find(c => c.types.includes('locality'))?.long_name;
     const state = address.find(c => c.types.includes('administrative_area_level_1'))?.short_name;
     const country = address.find(c => c.types.includes('country'))?.short_name;
@@ -58,7 +61,8 @@ export default function LocationPicker({ onLocationSelect }) {
 
     if (inputRef.current) inputRef.current.value = locationName;
 
-    onLocationSelect({ lat, lng, locationName });
+    // ✅ Include fullAddress
+    onLocationSelect({ lat, lng, locationName, fullAddress });
   }, [onLocationSelect]);
 
   if (loadError) return <p className="text-red-600">Error loading map</p>;
@@ -76,6 +80,7 @@ export default function LocationPicker({ onLocationSelect }) {
           placeholder="Search for a place"
           className="border px-2 py-1 mb-2 w-full"
         />
+        
       </Autocomplete>
       <GoogleMap
         mapContainerStyle={mapContainerStyle}

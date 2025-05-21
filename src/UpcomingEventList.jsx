@@ -2,56 +2,77 @@ import { useEffect, useState } from 'react';
 import { client } from '../sanityClient';
 import { format, startOfToday } from 'date-fns';
 import React from 'react';
+import { useNavigate } from 'react-router';
 
 export default function UpcomingEventsList() {
   const [groupedEvents, setGroupedEvents] = useState({ upcoming: {}, past: {} });
-  const [editing, setEditing] = useState(null);
   const [refresh, setRefresh] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    client
-      .fetch(`*[_type == "booking"] | order(startDate asc) {
-        _id,
-        locationName,
-        startDate,
-        endDate,
-        quantity,
-        gearType->{ name }
-      }`)
-      .then((data) => {
-        const upcoming = {};
-        const past = {};
-        const today = startOfToday();
+    client.fetch(`*[_type == "booking"] | order(startDate asc) {
+      _id,
+      locationName,
+      fullAddress,
+      latitude,
+      longitude,
+      startDate,
+      endDate,
+      quantity,
+      gearType->{ name }
+    }`).then((data) => {
+      const upcoming = {};
+      const past = {};
+      const today = startOfToday();
+      const locationKeyMap = {};
 
-        data.forEach((item) => {
-          const location = item.locationName || 'Unknown Location';
-          const gearName = item.gearType?.name || 'Unknown Gear';
+      data.forEach((item) => {
+        const location = item.locationName || 'Unknown Location';
+        const gearName = item.gearType?.name || 'Unknown Gear';
+        const start = new Date(item.startDate);
+        const end = new Date(item.endDate);
+        const isPast = end < today;
+        const locationKey = `${location}_${item.startDate}_${item.endDate}`;
 
-          const start = new Date(item.startDate);
-          const end = new Date(item.endDate);
+        if (!locationKeyMap[locationKey]) {
+          locationKeyMap[locationKey] = {
+            location,
+            startDate: start,
+            endDate: end,
+            gearMap: {},
+            fullAddress: item.fullAddress,
+            latitude: item.latitude,
+            longitude: item.longitude,
+            allBookings: []
+          };
+        }
 
-          // Determine whether the booking is past or upcoming
-          const isPast = end < today;
-          const target = isPast ? past : upcoming;
+        const group = locationKeyMap[locationKey];
+        group.allBookings.push(item);
 
-          if (!target[location]) {
-            target[location] = {
-              startDate: start,
-              endDate: end,
-              gearMap: {},
-            };
-          }
+        if (!group.gearMap[gearName]) {
+          group.gearMap[gearName] = { total: 0, bookingIds: new Set() };
+        }
 
-          const group = target[location];
-          if (start < group.startDate) group.startDate = start;
-          if (end > group.endDate) group.endDate = end;
-
-          if (!group.gearMap[gearName]) group.gearMap[gearName] = [];
-          group.gearMap[gearName].push(item);
-        });
-
-        setGroupedEvents({ upcoming, past });
+        if (!group.gearMap[gearName].bookingIds.has(item._id)) {
+          group.gearMap[gearName].total += item.quantity;
+          group.gearMap[gearName].bookingIds.add(item._id);
+        }
       });
+
+      const groupedByLocation = { upcoming: {}, past: {} };
+
+      Object.entries(locationKeyMap).forEach(([groupKey, entry]) => {
+        const isPast = entry.endDate < today;
+        const target = isPast ? groupedByLocation.past : groupedByLocation.upcoming;
+
+        target[groupKey] = {
+          ...entry,
+        };
+      });
+
+      setGroupedEvents(groupedByLocation);
+    });
   }, [refresh]);
 
   return (
@@ -61,124 +82,51 @@ export default function UpcomingEventsList() {
         <p className="text-gray-500">No upcoming bookings found.</p>
       )}
 
-      {Object.entries(groupedEvents.upcoming).map(([location, info]) => (
-        <div key={location} className="mb-8 border-b pb-4">
-          <h3 className="text-xl font-semibold mb-1">📍 {location}</h3>
+      {Object.entries(groupedEvents.upcoming).map(([groupKey, info]) => (
+        <div key={groupKey} className="mb-8 border-b pb-4">
+          <h3 className="text-xl font-semibold mb-1">📍 {info.location}</h3>
+          <button
+            onClick={() => {
+              navigate('/bookingform', {
+                state: {
+                  bookingIds: info.allBookings.map((b) => b._id),
+                },
+              });
+            }}
+            className="text-yellow-600 text-sm underline"
+          >
+            Edit Event
+          </button>
+
+          <p className="text-sm italic text-gray-500">{info.fullAddress || 'No address'}</p>
+
+          {info.latitude && info.longitude && (
+            <a
+              className="text-blue-500 text-sm underline"
+              href={`https://www.google.com/maps/search/?api=1&query=${info.latitude},${info.longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View on Google Maps
+            </a>
+          )}
+
           <p className="text-sm text-gray-600 mb-2">
             📅 {format(info.startDate, 'MMM d')} – {format(info.endDate, 'MMM d')}
           </p>
-          {Object.entries(info.gearMap || {}).map(([gearName, bookings]) => (
+
+          {Object.entries(info.gearMap).map(([gearName, data]) => (
             <div key={gearName} className="mb-2 ml-4">
               <strong>{gearName}</strong>
               <ul className="list-disc ml-5">
-                {bookings.map((b) => (
-                  <li key={b._id}id={b._id}>
-                    {b.quantity} unit{b.quantity > 1 ? 's' : ''} (
-                    {format(new Date(b.startDate), 'MMM d')} - {format(new Date(b.endDate), 'MMM d')})
-                    <button
-                      onClick={() => setEditing(b)}
-                      className="ml-2 text-blue-600 text-sm underline"
-                    >
-                      Edit
-                    </button>
-                  </li>
-                ))}
+                <li>
+                  {data.total} unit{data.total > 1 ? 's' : ''} ({format(info.startDate, 'MMM d')} - {format(info.endDate, 'MMM d')})
+                </li>
               </ul>
             </div>
           ))}
         </div>
       ))}
-
-      <hr className="my-8" />
-
-      <h2 className="text-2xl font-bold mb-6">Past Events by Location</h2>
-      {Object.keys(groupedEvents.past).length === 0 && (
-        <p className="text-gray-500">No past bookings found.</p>
-      )}
-
-      {Object.entries(groupedEvents.past).map(([location, info]) => (
-        <div key={location} className="mb-8 border-b pb-4">
-          <h3 className="text-xl font-semibold mb-1">📍 {location}</h3>
-          <p className="text-sm text-gray-600 mb-2">
-            📅 {format(info.startDate, 'MMM d')} – {format(info.endDate, 'MMM d')}
-          </p>
-          {Object.entries(info.gearMap || {}).map(([gearName, bookings]) => (
-            <div key={gearName} className="mb-2 ml-4">
-              <strong>{gearName}</strong>
-              <ul className="list-disc ml-5">
-                {bookings.map((b) => (
-                  <li key={b._id}>
-                    {b.quantity} unit{b.quantity > 1 ? 's' : ''} (
-                    {format(new Date(b.startDate), 'MMM d')} - {format(new Date(b.endDate), 'MMM d')})
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      ))}
-
-      {editing && <EditEventModal booking={editing} onClose={() => setEditing(null)} />}
-    </div>
-  );
-}
-
-function EditEventModal({ booking, onClose }) {
-  const [quantity, setQuantity] = useState(booking.quantity);
-  const [startDate, setStartDate] = useState(booking.startDate);
-  const [endDate, setEndDate] = useState(booking.endDate);
-
-  const handleSave = async () => {
-    try {
-      await client
-        .patch(booking._id)
-        .set({
-          quantity,
-          startDate: new Date(startDate).toISOString(),
-          endDate: new Date(endDate).toISOString(),
-        })
-        .commit();
-      console.log("✅ Booking updated");
-      onClose();
-    } catch (err) {
-      console.error("❌ Patch failed:", err);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded shadow-xl w-96">
-        <h3 className="text-lg font-bold mb-2">Edit Booking</h3>
-
-        <label className="block text-sm">Quantity</label>
-        <input
-          type="number"
-          value={quantity}
-          onChange={(e) => setQuantity(+e.target.value)}
-          className="border w-full p-1 mb-3"
-        />
-
-        <label className="block text-sm">Start Date</label>
-        <input
-          type="datetime-local"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="border w-full p-1 mb-3"
-        />
-
-        <label className="block text-sm">End Date</label>
-        <input
-          type="datetime-local"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className="border w-full p-1 mb-3"
-        />
-
-        <div className="flex justify-end space-x-2">
-          <button onClick={onClose} className="px-4 py-1 bg-gray-300 rounded">Cancel</button>
-          <button onClick={handleSave} className="px-4 py-1 bg-blue-600 text-white rounded">Save</button>
-        </div>
-      </div>
     </div>
   );
 }

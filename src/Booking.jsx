@@ -1,38 +1,34 @@
+// BookingForm.jsx (Final Fixed Version)
 import { useState } from 'react';
 import { client } from '../sanityClient';
 import { eachDayOfInterval, formatISO } from 'date-fns';
 import LocationPicker from './LocationPicker';
-import React from 'react';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
-
+import React from 'react'
 export default function BookingForm({ selectedGearTypes = [], onClose, startDate, endDate }) {
-
-  
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [locationName, setLocationName] = useState('');
+  const [fullAddress, setFullAddress] = useState('');
+  const [latLng, setLatLng] = useState({ lat: null, lng: null });
+
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    console.log('🚀 Submit triggered');
-  
+
     try {
       const start = new Date(startDate);
       const end = new Date(endDate);
       start.setHours(0, 0, 0, 0);
       end.setHours(0, 0, 0, 0);
-  
-      console.log('📅 Start:', start.toISOString(), 'End:', end.toISOString());
-      console.log('📦 Selected gear:', selectedGearTypes);
-  
+
       for (const gear of selectedGearTypes) {
         const quantity = gear.count || 0;
-        console.log(`🔎 Checking gear: ${gear.name}, Qty: ${quantity}`);
-  
+
         const overlappingBookings = await client.fetch(
           `*[_type == "booking" && gearType._ref == $gearId && !((endDate <= $start) || (startDate >= $end))]`,
           {
@@ -41,12 +37,10 @@ export default function BookingForm({ selectedGearTypes = [], onClose, startDate
             end: formatISO(end),
           }
         );
-  
-        console.log(`📊 Overlapping bookings for ${gear.name}:`, overlappingBookings);
-  
+
         const requestedDays = eachDayOfInterval({ start, end });
         const dailyBookedMap = {};
-  
+
         for (let booking of overlappingBookings) {
           const bStart = new Date(booking.startDate);
           const bEnd = new Date(booking.endDate);
@@ -56,49 +50,27 @@ export default function BookingForm({ selectedGearTypes = [], onClose, startDate
             dailyBookedMap[key] = (dailyBookedMap[key] || 0) + booking.quantity;
           }
         }
-        for (let day of requestedDays) {
-          const key = day.toISOString().split('T')[0];
-          dailyBookedMap[key] = 0;
-        
-          for (let booking of overlappingBookings) {
-            const bStart = new Date(booking.startDate);
-            const bEnd = new Date(booking.endDate);
-            if (day >= bStart && day <= bEnd) {
-              dailyBookedMap[key] += booking.quantity;
-            }
-          }
-        }
-  
+
         const newBooking = {
           _type: 'booking',
           gearType: { _type: 'reference', _ref: gear._id },
           quantity,
           locationName,
+          fullAddress,
+          latitude: latLng.lat,
+          longitude: latLng.lng,
           startDate,
           endDate,
           status: 'confirmed',
           notes,
         };
-  
-        console.log('📤 Creating booking:', newBooking);
+
         await client.create(newBooking);
-  
-        toast.success(`✅ Booked ${gear.name} for ${locationName}`, {
-          position: 'bottom-right',
-          autoClose: 3000,
-          hideProgressBar: false,
-          pauseOnHover: true,
-        });
+        toast.success(`Booked ${gear.name} for ${locationName}`);
       }
-  
-      console.log('✅ All bookings created, navigating to /events');
+
       navigate('/events');
-  
-      setTimeout(() => {
-        setMessage('');
-        console.log('🔙 Closing booking form');
-        onClose();
-      }, 1200);
+      onClose?.();
     } catch (err) {
       console.error('❌ Booking error:', err);
       toast.error('❌ Failed to book. Try again.');
@@ -117,11 +89,17 @@ export default function BookingForm({ selectedGearTypes = [], onClose, startDate
         </div>
       ))}
 
-      
-
       <LocationPicker
-        onLocationSelect={({ lat, lng, locationName }) => setLocationName(locationName)}
+        onLocationSelect={({ lat, lng, locationName, fullAddress }) => {
+          setLatLng({ lat, lng });
+          setLocationName(locationName);
+          setFullAddress(fullAddress);
+        }}
       />
+
+      {fullAddress && (
+        <p className="text-sm italic text-gray-600">Full Address: {fullAddress}</p>
+      )}
 
       <div>
         <label>Notes:</label>

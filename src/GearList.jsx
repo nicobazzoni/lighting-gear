@@ -128,7 +128,7 @@ export default function GearList() {
               <img
                 src={urlFor(type.defaultImage).width(400).url()}
                 alt={type.name}
-                className="w-full h-48 object-cover rounded mb-2"
+                className="w-full h-32 object-cover rounded mb-2"
               />
             ) : (
               <div className="w-full h-48 bg-gray-100 flex items-center justify-center text-gray-500 rounded mb-2">

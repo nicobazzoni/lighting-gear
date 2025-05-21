@@ -74,7 +74,7 @@ export default function GearCalendar({ gearType }) {
 
       {showForm && selectedDate && (
         <BookingForm
-          preselectedGearType={gearType}
+          preType={gearType}
           preselectedDate={selectedDate}
           onClose={() => setShowForm(false)}
         />
