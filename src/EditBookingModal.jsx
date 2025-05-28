@@ -81,12 +81,56 @@ const [deleting, setDeleting] = useState(false);
   const handleUpdate = async () => {
     setUpdating(true);
     try {
-      for (let id of bookingIds) await client.delete(id);
       for (const gear of Object.values(gearMap)) {
-        if (gear.count > 0) {
-          await client.create({ /* ... */ });
+        const bookingIdsForGear = gear.bookingIds || [];
+        const count = gear.count;
+  
+        // Delete extras if count decreased
+        if (bookingIdsForGear.length > count) {
+          const toDelete = bookingIdsForGear.slice(count);
+          for (let id of toDelete) {
+            await client.delete(id);
+          }
+        }
+  
+        // Create new if count increased
+        if (bookingIdsForGear.length < count) {
+          const toAdd = count - bookingIdsForGear.length;
+          for (let i = 0; i < toAdd; i++) {
+            await client.create({
+              _type: 'booking',
+              gearType: { _type: 'reference', _ref: gear._id },
+              quantity: 1,
+              locationName,
+              fullAddress,
+              latitude: latLng.lat,
+              longitude: latLng.lng,
+              notes,
+              startDate,
+              endDate,
+            });
+          }
+        }
+  
+        // Update existing bookings
+        const toUpdate = bookingIdsForGear.slice(0, count);
+        for (let id of toUpdate) {
+          await client.createOrReplace({
+            _id: id,
+            _type: 'booking',
+            gearType: { _type: 'reference', _ref: gear._id },
+            quantity: 1,
+            locationName,
+            fullAddress,
+            latitude: latLng.lat,
+            longitude: latLng.lng,
+            notes,
+            startDate,
+            endDate,
+          });
         }
       }
+  
       toast.success('✅ Booking updated');
       navigate('/events');
     } catch (err) {
@@ -96,7 +140,6 @@ const [deleting, setDeleting] = useState(false);
       setUpdating(false);
     }
   };
-  
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this booking?')) return;
     setDeleting(true);
@@ -174,16 +217,21 @@ const [deleting, setDeleting] = useState(false);
         })}
       </div>
 
-      <button onClick={handleUpdate} className="mt-6 bg-blue-600 text-white px-4 py-2 rounded">
-        Save Changes
-      </button>
-
       <button
-    onClick={handleDelete}
-    className="bg-red-600 text-white px-4 py-2 rounded"
-  >
-    Delete Booking
-  </button>
+  onClick={handleUpdate}
+  className="mt-6 bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+  disabled={updating || deleting}
+>
+  {updating ? 'Saving...' : 'Save Changes'}
+</button>
+
+<button
+  onClick={handleDelete}
+  className="bg-red-600 text-white px-4 py-2 rounded mt-2 disabled:opacity-50"
+  disabled={updating || deleting}
+>
+  {deleting ? 'Deleting...' : 'Delete Booking'}
+</button>
     </div>
   );
 }
