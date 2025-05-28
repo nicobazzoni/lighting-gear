@@ -22,6 +22,7 @@ export default function UpcomingEventsList() {
       startDate,
       endDate,
       quantity,
+      notes,
       gearType->{ name }
     }`).then((data) => {
       const upcoming = {};
@@ -115,6 +116,11 @@ export default function UpcomingEventsList() {
               View on Google Maps
             </a>
           )}
+          {info.allBookings[0]?.notes && (
+  <p className="text-sm text-gray-700 mt-2">
+    📝 <strong>Notes:</strong> {info.allBookings[0].notes}
+  </p>
+)}
 
           <p className="text-sm text-gray-600 mb-2">
             📅 {format(info.startDate, 'MMM d')} – {format(info.endDate, 'MMM d')}
