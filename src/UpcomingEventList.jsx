@@ -9,9 +9,7 @@ export default function UpcomingEventsList() {
   const [groupedEvents, setGroupedEvents] = useState({ upcoming: {}, past: {} });
   const [refresh, setRefresh] = useState(false);
   const navigate = useNavigate();
-  const [updating, setUpdating] = useState(false);
 
-  
   useEffect(() => {
     client.fetch(`*[_type == "booking"] | order(startDate asc) {
       _id,
@@ -25,8 +23,6 @@ export default function UpcomingEventsList() {
       notes,
       gearType->{ name }
     }`).then((data) => {
-      const upcoming = {};
-      const past = {};
       const today = startOfToday();
       const locationKeyMap = {};
 
@@ -35,7 +31,6 @@ export default function UpcomingEventsList() {
         const gearName = item.gearType?.name || 'Unknown Gear';
         const start = new Date(item.startDate);
         const end = new Date(item.endDate);
-        const isPast = end < today;
         const locationKey = `${location}_${item.startDate}_${item.endDate}`;
 
         if (!locationKeyMap[locationKey]) {
@@ -69,10 +64,7 @@ export default function UpcomingEventsList() {
       Object.entries(locationKeyMap).forEach(([groupKey, entry]) => {
         const isPast = entry.endDate < today;
         const target = isPast ? groupedByLocation.past : groupedByLocation.upcoming;
-
-        target[groupKey] = {
-          ...entry,
-        };
+        target[groupKey] = entry;
       });
 
       setGroupedEvents(groupedByLocation);
@@ -89,26 +81,9 @@ export default function UpcomingEventsList() {
       {Object.entries(groupedEvents.upcoming).map(([groupKey, info]) => (
         <div key={groupKey} className="mb-8 border-b pb-4">
           <h3 className="text-xl font-semibold mb-1">📍 {info.location}</h3>
-          
-          <button
-  onClick={() => {
-    const ids = info.allBookings?.map((b) => b._id) || [];
-    if (ids.length === 0) return;
-
-    navigate('/edit-booking', {
-      state: { bookingIds: ids },
-    });
-  }}
-  className="text-yellow-600 text-sm underline"
->
-  Edit Event
-</button>
-
-          <p className="text-sm italic text-gray-500">{info.fullAddress || 'No address'}</p>
-
           {info.latitude && info.longitude && (
             <a
-              className="text-blue-500 text-sm underline"
+              className="text-blue-500 text-sm no-underline"
               href={`https://www.google.com/maps/search/?api=1&query=${info.latitude},${info.longitude}`}
               target="_blank"
               rel="noopener noreferrer"
@@ -116,28 +91,84 @@ export default function UpcomingEventsList() {
               View on Google Maps
             </a>
           )}
-          {info.allBookings[0]?.notes && (
-  <p className="text-sm text-gray-700 mt-2">
-    📝 <strong>Notes:</strong> {info.allBookings[0].notes}
-  </p>
-)}
-
           <p className="text-sm text-gray-600 mb-2">
             📅 {format(info.startDate, 'MMM d')} – {format(info.endDate, 'MMM d')}
           </p>
+          <p className="text-sm italic text-gray-500">{info.fullAddress || 'No address'}</p>
+
+          <button
+            onClick={() => {
+              const ids = info.allBookings?.map((b) => b._id) || [];
+              if (ids.length === 0) return;
+              navigate('/edit-booking', { state: { bookingIds: ids } });
+            }}
+            className="text-yellow-600 text-sm"
+          >
+            Edit Event
+          </button>
+
+          {info.allBookings[0]?.notes && (
+            <p className="text-sm text-gray-700 mt-2">
+              📝 <strong>Notes:</strong> {info.allBookings[0].notes}
+            </p>
+          )}
 
           {Object.entries(info.gearMap).map(([gearName, data]) => (
             <div key={gearName} className="mb-2 ml-4">
               <strong>{gearName}</strong>
               <ul className="list-disc ml-5">
                 <li>
-                  {data.total} unit{data.total > 1 ? 's' : ''} ({format(info.startDate, 'MMM d')} - {format(info.endDate, 'MMM d')})
+                  {data.total} unit{data.total > 1 ? 's' : ''} (
+                  {format(info.startDate, 'MMM d')} - {format(info.endDate, 'MMM d')})
                 </li>
               </ul>
             </div>
           ))}
         </div>
       ))}
+
+      <h2 className="text-2xl font-bold mt-10 mb-6">Past Events by Location</h2>
+      {Object.keys(groupedEvents.past).length === 0 ? (
+        <p className="text-gray-500">No past bookings found.</p>
+      ) : (
+        Object.entries(groupedEvents.past).map(([groupKey, info]) => (
+          <div key={groupKey} className="mb-8 border-b pb-4 opacity-80">
+            <h3 className="text-xl font-semibold mb-1">📍 {info.location}</h3>
+            {info.latitude && info.longitude && (
+              <a
+                className="text-blue-500 text-sm no-underline"
+                href={`https://www.google.com/maps/search/?api=1&query=${info.latitude},${info.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View on Google Maps
+              </a>
+            )}
+            <p className="text-sm text-gray-600 mb-2">
+              📅 {format(info.startDate, 'MMM d')} – {format(info.endDate, 'MMM d')}
+            </p>
+            <p className="text-sm italic text-gray-500">{info.fullAddress || 'No address'}</p>
+
+            {info.allBookings[0]?.notes && (
+              <p className="text-sm text-gray-700 mt-2">
+                📝 <strong>Notes:</strong> {info.allBookings[0].notes}
+              </p>
+            )}
+
+            {Object.entries(info.gearMap).map(([gearName, data]) => (
+              <div key={gearName} className="mb-2 ml-4">
+                <strong>{gearName}</strong>
+                <ul className="list-disc ml-5">
+                  <li>
+                    {data.total} unit{data.total > 1 ? 's' : ''} (
+                    {format(info.startDate, 'MMM d')} - {format(info.endDate, 'MMM d')})
+                  </li>
+                </ul>
+              </div>
+            ))}
+          </div>
+        ))
+      )}
     </div>
   );
 }
